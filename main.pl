@@ -1,5 +1,7 @@
 % forming db ======================
 
+% Note: class-2 cities can only visit class-1 cities; class-1 cities can visit all cities.
+
 clear:-
     tty_clear,
     retractall(places_to_1(_)),
@@ -43,8 +45,8 @@ clear_queue:- retractall(queue(_)), assert(queue([])), !.
 clear_visited:- retractall(visted(_)), assert(visted([])), !.
 clear_p_info:- retractall(p_info(_, _, _)), !.
 
-dist(X, Y, D):- places_to_1(PT), nth1(I, PT, Y), !, places_from_1(X, PF_D), nth1(I, PF_D, D_), ( D_ = '-' -> D = 0 ; D = D_ ), !.
-dist(X, Y, D):- places_to_2(PT), nth1(I, PT, Y), !, places_from_2(X, PF_D), nth1(I, PF_D, D_), ( D_ = '-' -> D = 0 ; D = D_ ), !.
+dist(X, Y, D):- places_from_1(X, PF_D), places_to_1(PT), nth1(I, PT, Y), nth1(I, PF_D, D_), ( D_ = '-' -> D = 0 ; D = D_ ), !.
+dist(X, Y, D):- places_from_2(X, PF_D), places_to_2(PT), nth1(I, PT, Y), nth1(I, PF_D, D_), ( D_ = '-' -> D = 0 ; D = D_ ), !.
 
 % binds LC: "List of Cities" reachable from X
 cities_to(X, LC):- places_from_1(X, _), places_to_1(LC), !.
@@ -86,7 +88,7 @@ show_bfs(Start, End, Path, Dist):-
 
 bfs(End):- 
     not(q_empty), q_front(U), not(U = End), q_pop_front,
-    dbg(['Q head', U]), dbg_q,
+    dbg(['Q head: ', U]), dbg_q,
     p_info(U, PathYet, DistYet), 
     dbg([PathYet, DistYet]),
     cities_to(U, LV), 
