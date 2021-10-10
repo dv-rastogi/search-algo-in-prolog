@@ -132,7 +132,8 @@ find_min([H | T], M, G):- find_min(T, M_, G), heuristic(H, G, Heu), heuristic(M_
 % Breadth First Search
 show_bfs(Start, End, Path, Dist):- 
     clear_queue, clear_visited, clear_p_info, 
-    assert(p_info(Start, [Start], 0)), q_push_back(Start),
+    assert(p_info(Start, [Start], 0)), 
+    q_push_back(Start), add_visited([Start]),
     bfs(End), p_info(End, Path, Dist).
 
 bfs(_):- q_empty, !.
@@ -154,7 +155,8 @@ bfs(End):-
 % Greedy Best First Search
 show_gbs(Start, End, Path, Dist):- 
     clear_pqueue, clear_visited, clear_p_info,
-    assert(p_info(Start, [Start], 0)), pq_push_back(Start),
+    assert(p_info(Start, [Start], 0)), 
+    pq_push_back(Start), add_visited([Start]),
     gbs(End), p_info(End, Path, Dist).
 
 gbs(_):- pq_empty, !.
