@@ -14,10 +14,12 @@ clear:-
     retractall(places_to_2(_)),
     retractall(places_from_2(_, _)),
     retractall(heuristic_from_2(_, _)),
-    retractall(queue(_)).
+    retractall(queue(_)),
+    retractall(pqueue(_)).
 
 init:-
-    assert(queue([])).
+    assert(queue([])),
+    assert(pqueue([])).
 
 index:-
     row(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22, A23, A24, A25, A26, A27, A28, A29, A30, A31, A32, A33, A34, A35, A36, A37, A38, A39, A40, A41, A42, A43, A44, A45, A46, A47, A48),
@@ -45,6 +47,7 @@ index_h:-
     row(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21), 
     assert(heuristic_from_2(A1, [A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21])), !.
 
+% driver function for formation of db
 form:- 
     clear, init, 
     read_1, read_2, 
@@ -53,27 +56,29 @@ form:-
 read_1:- csv_read_file('class_1_cities.csv', DATA_1), assert(data_count(0)), parse(DATA_1).
 read_2:- csv_read_file('class_2_cities.csv', DATA_2), assert(data_count(0)), parse(DATA_2).
 
-read_heuristic_1:- csv_read_file('heuristic_1_cities.csv', [_|DATA_1]), parse_h(DATA_1).
-read_heuristic_2:- csv_read_file('heuristic_2_cities.csv', [_|DATA_2]), parse_h(DATA_2).
+read_heuristic_1:- csv_read_file('heuristic_1_cities.csv', [_ | DATA_1]), parse_h(DATA_1).
+read_heuristic_2:- csv_read_file('heuristic_2_cities.csv', [_ | DATA_2]), parse_h(DATA_2).
 
 parse([]):- retractall(data_count(_)).
-parse([H|T]):- assert(H), index, retractall(H), parse(T).
+parse([H | T]):- assert(H), index, retractall(H), parse(T).
 
 parse_h([]).
-parse_h([H|T]):- assert(H), index_h, retractall(H), parse_h(T).
+parse_h([H | T]):- assert(H), index_h, retractall(H), parse_h(T).
 
 % utilities =======================
 
 % maintained for each iteration of search
-clear_queue:- retractall(queue(_)), assert(queue([])), !.
-clear_visited:- retractall(visted(_)), assert(visted([])), !.
-clear_p_info:- retractall(p_info(_, _, _)), !.
+clear_queue:- retractall(queue(_)), assert(queue([])).
+clear_pqueue:- retractall(pqueue(_)), assert(pqueue([])).
+clear_visited:- retractall(visted(_)), assert(visted([])).
+clear_p_info:- retractall(p_info(_, _, _)).
 
 dist(X, Y, D):- places_from_1(X, PF_D), places_to_1(PT), nth1(I, PT, Y), nth1(I, PF_D, D_), ( D_ = '-' -> D = 0 ; D = D_ ), !.
 dist(X, Y, D):- places_from_2(X, PF_D), places_to_2(PT), nth1(I, PT, Y), nth1(I, PF_D, D_), ( D_ = '-' -> D = 0 ; D = D_ ), !.
 
 heuristic(X, Y, H):- heuristic_from_1(X, PF_H), places_to_1(PT), nth1(I, PT, Y), nth1(I, PF_H, H), !.
 heuristic(X, Y, H):- heuristic_from_2(X, PF_H), places_to_2(PT), nth1(I, PT, Y), nth1(I, PF_H, H), !.
+heuristic(_, _, 999999999). % for cities that are not reachable, assign infinite heuristic
 
 % binds LC: "List of Cities" reachable from X
 cities_to(X, LC):- places_from_1(X, _), places_to_1(LC), !.
@@ -99,15 +104,32 @@ q_pop_front:- queue(Q), retractall(queue(_)), pop_front(Q, NQ, _), assert(queue(
 q_front(X):- queue([X | _]).
 q_empty:- queue(Q), empty(Q).
 
+add_pq([]).
+add_pq([H | T]):- pq_push_back(H), add_pq(T).
+pq_push_back(X):- pqueue(Q), retractall(pqueue(_)), push_back(Q, X, NQ), assert(pqueue(NQ)).
+pq_pop_front(G):- pqueue(Q), retractall(pqueue(_)), find_min(Q, M, G), remove_first(Q, M, NQ), assert(pqueue(NQ)).
+pq_front(X, G):- pqueue(Q), find_min(Q, X, G).
+pq_empty:- pqueue(Q), empty(Q).
+
 empty([]).
 
 push_back([], X, [X]).
-push_back([H | T], X, [H | L]):- push_back(T, X, L), !.
+push_back([H | T], X, [H | L]):- push_back(T, X, L).
 
 pop_front([H | T], T, H).
 
+% removes the first appearance of X in the List
+remove_first([], _, []).
+remove_first([H | T], X, List):- H = X, List = T, !.
+remove_first([H | T], X, [H | List]):- remove_first(T, X, List), !.
+
+% finds min of list
+find_min([X], X, _).
+find_min([H | T], M, G):- find_min(T, M_, G), heuristic(H, G, Heu), heuristic(M_, G, Heu_), ( Heu < Heu_ -> M = H ; M = M_ ).
+
 % algo =========================
 
+% Breadth First Search
 show_bfs(Start, End, Path, Dist):- 
     clear_queue, clear_visited, clear_p_info, 
     assert(p_info(Start, [Start], 0)), q_push_back(Start),
@@ -129,7 +151,31 @@ bfs(End):-
     add_p_infos(U, LV_, PathYet, DistYet), dbgnl, !,
     bfs(End).
 
+% Greedy Best First Search
+show_gbs(Start, End, Path, Dist):- 
+    clear_pqueue, clear_visited, clear_p_info,
+    assert(p_info(Start, [Start], 0)), pq_push_back(Start),
+    gbs(End), p_info(End, Path, Dist).
+
+gbs(_):- pq_empty, !.
+gbs(End):- not(pq_empty), pq_front(U, End), U = End, !.
+gbs(End):- 
+    not(pq_empty), pq_front(U, End), not(U = End), pq_pop_front(End),
+    dbg(['PQ head: ', U]), dbg_pq,
+    p_info(U, PathYet, DistYet),
+    cities_to(U, LV),
+    dbg(['Cities to: ', LV]),
+    exclude(is_visited, LV, LV_),
+    add_visited(LV_),
+    dbg_vis, dbg(['Cities filtered: ', LV_]),
+    add_pq(LV_),
+    add_p_infos(U, LV_, PathYet, DistYet), dbgnl, !,
+    gbs(End).
+
 % debug ==========================
+
+dbg_pq:- dbg_mode(M), M = 1, pqueue(Q), write('>>>> PQueue: '), writeln(Q), !.
+dbg_pq:- dbg_mode(M), M = 0.
 
 dbg_q:- dbg_mode(M), M = 1, queue(Q), write('>>>> Queue: '), writeln(Q), !.
 dbg_q:- dbg_mode(M), M = 0.
