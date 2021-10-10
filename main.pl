@@ -10,8 +10,10 @@ clear:-
     tty_clear,
     retractall(places_to_1(_)),
     retractall(places_from_1(_, _)),
+    retractall(heuristic_from_1(_, _)),
     retractall(places_to_2(_)),
     retractall(places_from_2(_, _)),
+    retractall(heuristic_from_2(_, _)),
     retractall(queue(_)).
 
 init:-
@@ -36,11 +38,29 @@ index:-
     N_ is N + 1,
     assert(data_count(N_)), !.
 
-form:- clear, init, read_1, read_2.
+index_h:-
+    row(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22, A23, A24, A25, A26, A27, A28, A29, A30, A31, A32, A33, A34, A35, A36, A37, A38, A39, A40, A41, A42, A43, A44, A45, A46, A47, A48),
+    assert(heuristic_from_1(A1, [A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22, A23, A24, A25, A26, A27, A28, A29, A30, A31, A32, A33, A34, A35, A36, A37, A38, A39, A40, A41, A42, A43, A44, A45, A46, A47, A48])), !.
+index_h:- 
+    row(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21), 
+    assert(heuristic_from_2(A1, [A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21])), !.
+
+form:- 
+    clear, init, 
+    read_1, read_2, 
+    read_heuristic_1, read_heuristic_2.
+
 read_1:- csv_read_file('class_1_cities.csv', DATA_1), assert(data_count(0)), parse(DATA_1).
 read_2:- csv_read_file('class_2_cities.csv', DATA_2), assert(data_count(0)), parse(DATA_2).
-parse([H|T]):- assert(H), index, retract(H), parse(T).
+
+read_heuristic_1:- csv_read_file('heuristic_1_cities.csv', [_|DATA_1]), parse_h(DATA_1).
+read_heuristic_2:- csv_read_file('heuristic_2_cities.csv', [_|DATA_2]), parse_h(DATA_2).
+
 parse([]):- retractall(data_count(_)).
+parse([H|T]):- assert(H), index, retractall(H), parse(T).
+
+parse_h([]).
+parse_h([H|T]):- assert(H), index_h, retractall(H), parse_h(T).
 
 % utilities =======================
 
@@ -51,6 +71,9 @@ clear_p_info:- retractall(p_info(_, _, _)), !.
 
 dist(X, Y, D):- places_from_1(X, PF_D), places_to_1(PT), nth1(I, PT, Y), nth1(I, PF_D, D_), ( D_ = '-' -> D = 0 ; D = D_ ), !.
 dist(X, Y, D):- places_from_2(X, PF_D), places_to_2(PT), nth1(I, PT, Y), nth1(I, PF_D, D_), ( D_ = '-' -> D = 0 ; D = D_ ), !.
+
+heuristic(X, Y, H):- heuristic_from_1(X, PF_H), places_to_1(PT), nth1(I, PT, Y), nth1(I, PF_H, H), !.
+heuristic(X, Y, H):- heuristic_from_2(X, PF_H), places_to_2(PT), nth1(I, PT, Y), nth1(I, PF_H, H), !.
 
 % binds LC: "List of Cities" reachable from X
 cities_to(X, LC):- places_from_1(X, _), places_to_1(LC), !.
@@ -108,14 +131,14 @@ bfs(End):-
 
 % debug ==========================
 
-dbg_q:- dbg_mode(M), M = 1, queue(Q), write('>>>> Queue: '), writeln(Q).
+dbg_q:- dbg_mode(M), M = 1, queue(Q), write('>>>> Queue: '), writeln(Q), !.
 dbg_q:- dbg_mode(M), M = 0.
 
-dbg_vis:- dbg_mode(M), M = 1, visted(V), write('>>>> Visited: '), writeln(V).
+dbg_vis:- dbg_mode(M), M = 1, visted(V), write('>>>> Visited: '), writeln(V), !.
 dbg_vis:- dbg_mode(M), M = 0.
 
-dbg(X):- dbg_mode(M), M = 1, write('>>>> '), writeln(X).
+dbg(X):- dbg_mode(M), M = 1, write('>>>> '), writeln(X), !.
 dbg(_):- dbg_mode(M), M = 0.
 
-dbgnl:- dbg_mode(M), M = 1, nl, writeln('****'), nl.
+dbgnl:- dbg_mode(M), M = 1, nl, writeln('****'), nl, !.
 dbgnl:- dbg_mode(M), M = 0.
