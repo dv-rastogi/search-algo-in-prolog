@@ -19,7 +19,8 @@ clear:-
 
 init:-
     assert(queue([])),
-    assert(pqueue([])).
+    assert(pqueue([])),
+    assert(stack([])).
 
 index:-
     row(A1, A2, A3, A4, A5, A6, A7, A8, A9, A10, A11, A12, A13, A14, A15, A16, A17, A18, A19, A20, A21, A22, A23, A24, A25, A26, A27, A28, A29, A30, A31, A32, A33, A34, A35, A36, A37, A38, A39, A40, A41, A42, A43, A44, A45, A46, A47, A48),
@@ -70,6 +71,7 @@ parse_h([H | T]):- assert(H), index_h, retractall(H), parse_h(T).
 % maintained for each iteration of search
 clear_queue:- retractall(queue(_)), assert(queue([])).
 clear_pqueue:- retractall(pqueue(_)), assert(pqueue([])).
+clear_stack:- retractall(stack(_)), assert(stack([])).
 clear_visited:- retractall(visted(_)), assert(visted([])).
 clear_p_info:- retractall(p_info(_, _, _)).
 
@@ -111,12 +113,27 @@ pq_pop_front(G):- pqueue(Q), retractall(pqueue(_)), find_min(Q, M, G), remove_fi
 pq_front(X, G):- pqueue(Q), find_min(Q, X, G).
 pq_empty:- pqueue(Q), empty(Q).
 
+add_s([]).
+add_s([H | T]):- s_push_back(H), add_s(T).
+s_push_back(X):- stack(S), retractall(stack(_)), push_back(S, X, NS), assert(stack(NS)).
+s_pop_back:- stack(S), retractall(stack(_)), pop_back(S, NS), assert(stack(NS)).
+s_back(X):- stack(S), last(S, X).
+s_empty:- stack(S), empty(S).
+
 empty([]).
 
 push_back([], X, [X]).
 push_back([H | T], X, [H | L]):- push_back(T, X, L).
 
+pop_back([], []).
+pop_back([_], []).
+pop_back([H | T], [H | L]):- pop_back(T, L).
+
 pop_front([H | T], T, H).
+
+% finds last element of list
+last([X], X).
+last([_ | T], X):- last(T, X).
 
 % removes the first appearance of X in the List
 remove_first([], _, []).
@@ -128,6 +145,51 @@ find_min([X], X, _).
 find_min([H | T], M, G):- find_min(T, M_, G), heuristic(H, G, Heu), heuristic(M_, G, Heu_), ( Heu < Heu_ -> M = H ; M = M_ ).
 
 % algo =========================
+
+% Depth First Search
+show_dfs(Start, End, Path, Dist):- 
+    clear_stack, clear_visited, clear_p_info, 
+    assert(p_info(Start, [Start], 0)), 
+    s_push_back(Start), add_visited([Start]),
+    dfs(End), p_info(End, Path, Dist).
+
+dfs(_):- s_empty, !.
+dfs(End):- not(s_empty), s_back(U), U = End, !.
+dfs(End):- 
+    not(s_empty), s_back(U), not(U = End), s_pop_back,
+    dbg(['S back: ', U]), dbg_s,
+    p_info(U, PathYet, DistYet), 
+    dbg([PathYet, DistYet]),
+    cities_to(U, LV), 
+    dbg(['Cities to: ', LV]),
+    exclude(is_visited, LV, LV_),
+    add_visited(LV_),
+    dbg_vis, dbg(['Cities filtered: ', LV_]),
+    add_s(LV_),
+    add_p_infos(U, LV_, PathYet, DistYet), dbgnl, !,
+    dfs(End).
+
+% Greedy Best First Search
+show_gbs(Start, End, Path, Dist):- 
+    clear_pqueue, clear_visited, clear_p_info,
+    assert(p_info(Start, [Start], 0)), 
+    pq_push_back(Start), add_visited([Start]),
+    gbs(End), p_info(End, Path, Dist).
+
+gbs(_):- pq_empty, !.
+gbs(End):- not(pq_empty), pq_front(U, End), U = End, !.
+gbs(End):- 
+    not(pq_empty), pq_front(U, End), not(U = End), pq_pop_front(End),
+    dbg(['PQ head: ', U]), dbg_pq,
+    p_info(U, PathYet, DistYet),
+    cities_to(U, LV),
+    dbg(['Cities to: ', LV]),
+    exclude(is_visited, LV, LV_),
+    add_visited(LV_),
+    dbg_vis, dbg(['Cities filtered: ', LV_]),
+    add_pq(LV_),
+    add_p_infos(U, LV_, PathYet, DistYet), dbgnl, !,
+    gbs(End).
 
 % Breadth First Search
 show_bfs(Start, End, Path, Dist):- 
@@ -152,29 +214,10 @@ bfs(End):-
     add_p_infos(U, LV_, PathYet, DistYet), dbgnl, !,
     bfs(End).
 
-% Greedy Best First Search
-show_gbs(Start, End, Path, Dist):- 
-    clear_pqueue, clear_visited, clear_p_info,
-    assert(p_info(Start, [Start], 0)), 
-    pq_push_back(Start), add_visited([Start]),
-    gbs(End), p_info(End, Path, Dist).
-
-gbs(_):- pq_empty, !.
-gbs(End):- not(pq_empty), pq_front(U, End), U = End, !.
-gbs(End):- 
-    not(pq_empty), pq_front(U, End), not(U = End), pq_pop_front(End),
-    dbg(['PQ head: ', U]), dbg_pq,
-    p_info(U, PathYet, DistYet),
-    cities_to(U, LV),
-    dbg(['Cities to: ', LV]),
-    exclude(is_visited, LV, LV_),
-    add_visited(LV_),
-    dbg_vis, dbg(['Cities filtered: ', LV_]),
-    add_pq(LV_),
-    add_p_infos(U, LV_, PathYet, DistYet), dbgnl, !,
-    gbs(End).
-
 % debug ==========================
+
+dbg_s:- dbg_mode(M), M = 1, stack(S), write('>>>> Stack: '), writeln(S), !.
+dbg_s:- dbg_mode(M), M = 0.
 
 dbg_pq:- dbg_mode(M), M = 1, pqueue(Q), write('>>>> PQueue: '), writeln(Q), !.
 dbg_pq:- dbg_mode(M), M = 0.
