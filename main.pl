@@ -1,3 +1,7 @@
+:- assert(dbg_mode(1)).
+
+set_dbg(X):- retractall(dbg_mode(_)), assert(dbg_mode(X)).
+
 % forming db ======================
 
 % Note: class-2 cities can only visit class-1 cities; class-1 cities can visit all cities.
@@ -84,8 +88,10 @@ pop_front([H | T], T, H).
 show_bfs(Start, End, Path, Dist):- 
     clear_queue, clear_visited, clear_p_info, 
     assert(p_info(Start, [Start], 0)), q_push_back(Start),
-    bfs(End), p_info(End, Path, Dist), !.
+    bfs(End), p_info(End, Path, Dist).
 
+bfs(_):- q_empty, !.
+bfs(End):- not(q_empty), q_front(U), U = End, !.
 bfs(End):- 
     not(q_empty), q_front(U), not(U = End), q_pop_front,
     dbg(['Q head: ', U]), dbg_q,
@@ -97,14 +103,19 @@ bfs(End):-
     add_visited(LV_),
     dbg_vis, dbg(['Cities filtered: ', LV_]),
     add_q(LV_),
-    add_p_infos(U, LV_, PathYet, DistYet), dbgnl,
+    add_p_infos(U, LV_, PathYet, DistYet), dbgnl, !,
     bfs(End).
-bfs(End):- not(q_empty), q_front(U), U = End.
-bfs(_):- q_empty.
 
 % debug ==========================
 
-dbg_q:- queue(Q), write('>>>> Queue: '), writeln(Q).
-dbg_vis:- visted(V), write('>>>> Visited: '), writeln(V).
-dbg(X):- write('>>>> '), writeln(X).
-dbgnl:- nl, writeln('****'), nl.
+dbg_q:- dbg_mode(M), M = 1, queue(Q), write('>>>> Queue: '), writeln(Q).
+dbg_q:- dbg_mode(M), M = 0.
+
+dbg_vis:- dbg_mode(M), M = 1, visted(V), write('>>>> Visited: '), writeln(V).
+dbg_vis:- dbg_mode(M), M = 0.
+
+dbg(X):- dbg_mode(M), M = 1, write('>>>> '), writeln(X).
+dbg(_):- dbg_mode(M), M = 0.
+
+dbgnl:- dbg_mode(M), M = 1, nl, writeln('****'), nl.
+dbgnl:- dbg_mode(M), M = 0.
