@@ -179,14 +179,18 @@ perform_dfs(U, CurPath, CurDist, [H | T], End):-
     perform_dfs(U, CurPath, CurDist, T, End).
 
 % Greedy Best First Search
-show_gbs(Start, End, Path, Dist):- 
+show_gbs(Start, End):- 
     clear_pqueue, clear_visited, clear_p_info,
     assert(p_info(Start, [Start], 0)), 
     pq_push_back(Start), add_visited([Start]),
-    gbs(End), p_info(End, Path, Dist).
+    gbs(End).
 
-gbs(_):- pq_empty, !.
-gbs(End):- not(pq_empty), pq_front(U, End), U = End, !.
+gbs(_):- pq_empty, !, fail.
+gbs(End):- 
+    not(pq_empty), pq_front(U, End), U = End, 
+    p_info(End, P, D),
+    write('Path: '), writeln(P),
+    write('Dist: '), writeln(D), !, fail.
 gbs(End):- 
     not(pq_empty), pq_front(U, End), not(U = End), pq_pop_front(End),
     dbg(['PQ head: ', U]), dbg_pq,
@@ -201,14 +205,18 @@ gbs(End):-
     gbs(End).
 
 % Breadth First Search
-show_bfs(Start, End, Path, Dist):- 
+show_bfs(Start, End):- 
     clear_queue, clear_visited, clear_p_info, 
     assert(p_info(Start, [Start], 0)), 
     q_push_back(Start), add_visited([Start]),
-    bfs(End), p_info(End, Path, Dist).
+    bfs(End).
 
-bfs(_):- q_empty, !.
-bfs(End):- not(q_empty), q_front(U), U = End, !.
+bfs(_):- q_empty, !, fail.
+bfs(End):- 
+    not(q_empty), q_front(U), U = End,
+    p_info(End, P, D),
+    write('Path: '), writeln(P),
+    write('Dist: '), writeln(D), !, fail.
 bfs(End):- 
     not(q_empty), q_front(U), not(U = End), q_pop_front,
     dbg(['Q head: ', U]), dbg_q,
