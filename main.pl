@@ -147,16 +147,11 @@ find_min([H | T], M, G):- find_min(T, M_, G), heuristic(H, G, Heu), heuristic(M_
 % algo =========================
 
 % Depth First Search
-show_dfs(Start, End):- 
-    clear_visited, dfs(Start, [Start], 0, End), !.
+show_dfs(Start, End, Path, Dist):- 
+    clear_visited, dfs(Start, [Start], 0, End, Path, Dist), !.
 
-dfs(U, PathU, DistU, End):- 
-    U = End, 
-    write('Path: '), writeln(PathU),
-    write('Dist: '), writeln(DistU), !, fail.
-dfs(U, _, _, End):- 
-    not(U = End), is_visited(U), !.
-dfs(U, PathU, DistU, End):-
+dfs(U, PathU, DistU, U, PathU, DistU):- add_visited([U]).
+dfs(U, PathU, DistU, End, PathEnd, DistEnd):-
     not(U = End),
     not(is_visited(U)),
     dbg(['Cur Node: ', U]),
@@ -169,28 +164,20 @@ dfs(U, PathU, DistU, End):-
     exclude(is_visited, LV, LV_),
     dbg(['Cities filtered: ', LV_]),
     dbgnl, !,
-    perform_dfs(U, PathU, DistU, LV_, End).
-
-perform_dfs(_, _, _, [], _). 
-perform_dfs(U, CurPath, CurDist, [H | T], End):- 
-    push_back(CurPath, H, NewPath),
-    dist(U, H, D), NewDist is CurDist + D, 
-    dfs(H, NewPath, NewDist, End),
-    perform_dfs(U, CurPath, CurDist, T, End).
+    select(V, LV_, _),
+    push_back(PathU, V, PathV),
+    dist(U, V, D), DistV is DistU + D, 
+    dfs(V, PathV, DistV, End, PathEnd, DistEnd).
 
 % Greedy Best First Search
-show_gbs(Start, End):- 
+show_gbs(Start, End, Path, Dist):- 
     clear_pqueue, clear_visited, clear_p_info,
     assert(p_info(Start, [Start], 0)), 
     pq_push_back(Start), add_visited([Start]),
-    gbs(End).
+    gbs(End), p_info(End, Path, Dist).
 
-gbs(_):- pq_empty, !, fail.
-gbs(End):- 
-    not(pq_empty), pq_front(U, End), U = End, 
-    p_info(End, P, D),
-    write('Path: '), writeln(P),
-    write('Dist: '), writeln(D), !, fail.
+gbs(_):- pq_empty, !.
+gbs(End):- not(pq_empty), pq_front(U, End), U = End, !.
 gbs(End):- 
     not(pq_empty), pq_front(U, End), not(U = End), pq_pop_front(End),
     dbg(['PQ head: ', U]), dbg_pq,
@@ -205,18 +192,14 @@ gbs(End):-
     gbs(End).
 
 % Breadth First Search
-show_bfs(Start, End):- 
+show_bfs(Start, End, Path, Dist):- 
     clear_queue, clear_visited, clear_p_info, 
     assert(p_info(Start, [Start], 0)), 
     q_push_back(Start), add_visited([Start]),
-    bfs(End).
+    bfs(End), p_info(End, Path, Dist).
 
-bfs(_):- q_empty, !, fail.
-bfs(End):- 
-    not(q_empty), q_front(U), U = End,
-    p_info(End, P, D),
-    write('Path: '), writeln(P),
-    write('Dist: '), writeln(D), !, fail.
+bfs(_):- q_empty, !.
+bfs(End):- not(q_empty), q_front(U), U = End, !.
 bfs(End):- 
     not(q_empty), q_front(U), not(U = End), q_pop_front,
     dbg(['Q head: ', U]), dbg_q,
