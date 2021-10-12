@@ -147,27 +147,36 @@ find_min([H | T], M, G):- find_min(T, M_, G), heuristic(H, G, Heu), heuristic(M_
 % algo =========================
 
 % Depth First Search
-show_dfs(Start, End, Path, Dist):- 
-    clear_stack, clear_visited, clear_p_info, 
-    assert(p_info(Start, [Start], 0)), 
-    s_push_back(Start), add_visited([Start]),
-    dfs(End), p_info(End, Path, Dist).
+show_dfs(Start, End):- 
+    clear_visited, dfs(Start, [Start], 0, End), !.
 
-dfs(_):- s_empty, !.
-dfs(End):- not(s_empty), s_back(U), U = End, !.
-dfs(End):- 
-    not(s_empty), s_back(U), not(U = End), s_pop_back,
-    dbg(['S back: ', U]), dbg_s,
-    p_info(U, PathYet, DistYet), 
-    dbg([PathYet, DistYet]),
-    cities_to(U, LV), 
+dfs(U, PathU, DistU, End):- 
+    U = End, 
+    write('Path: '), writeln(PathU),
+    write('Dist: '), writeln(DistU), !, fail.
+dfs(U, _, _, End):- 
+    not(U = End), is_visited(U), !.
+dfs(U, PathU, DistU, End):-
+    not(U = End),
+    not(is_visited(U)),
+    dbg(['Cur Node: ', U]),
+    dbg(['Cur Path: ', PathU]),
+    dbg(['Cur Dist: ', DistU]),
+    add_visited([U]),
+    dbg_vis,
+    cities_to(U, LV),
     dbg(['Cities to: ', LV]),
     exclude(is_visited, LV, LV_),
-    add_visited(LV_),
-    dbg_vis, dbg(['Cities filtered: ', LV_]),
-    add_s(LV_),
-    add_p_infos(U, LV_, PathYet, DistYet), dbgnl, !,
-    dfs(End).
+    dbg(['Cities filtered: ', LV_]),
+    dbgnl, !,
+    perform_dfs(U, PathU, DistU, LV_, End).
+
+perform_dfs(_, _, _, [], _). 
+perform_dfs(U, CurPath, CurDist, [H | T], End):- 
+    push_back(CurPath, H, NewPath),
+    dist(U, H, D), NewDist is CurDist + D, 
+    dfs(H, NewPath, NewDist, End),
+    perform_dfs(U, CurPath, CurDist, T, End).
 
 % Greedy Best First Search
 show_gbs(Start, End, Path, Dist):- 
